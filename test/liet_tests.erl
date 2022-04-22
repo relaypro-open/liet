@@ -63,6 +63,7 @@ liet_test_() ->
               , ?_assertMatch({ok, _}, liet:apply(LietGraph, [var_log_dir], ?Timeout))
               , ?_assertNotMatch({ok, #{tmp_dir := _}}, liet:apply(LietGraph, [var_log_dir], ?Timeout))
 
+                %% Apply a graph and pass the State into the destroy
               , ?_assertMatch({{ok,#{my_env_entry := my_key}},{ok,#{my_env_entry := ok}}},
                               apply_and_destroy_env({my_key, foo}, StatefulGraph))
              ]
