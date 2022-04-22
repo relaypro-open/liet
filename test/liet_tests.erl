@@ -9,7 +9,11 @@ liet_test_() ->
     {setup,
      fun setup/0,
      fun teardown/1,
-     fun(#{graph := LietGraph, meck := MeckGraph, stateful := StatefulGraph}) ->
+     fun(#{graph := LietGraph,
+           meck := MeckGraph,
+           stateful := StatefulGraph,
+           single := SingleVisitGraph,
+           recursive := RecursiveDepsGraph}) ->
              [
                 %% Implicitly defined linear dependency graph -- AKA a very complicated fold
                 ?_assertMatch({ok, #{root := hello,
@@ -68,7 +72,15 @@ liet_test_() ->
                               apply_and_destroy_env({my_key, foo}, StatefulGraph))
 
                 %% Compile from file
-              , ?_assertMatch({ok, _}, liet:compile_file("test/graph.liet"))
+              , ?_assertMatch({ok, #{}}, liet:compile_file("test/graph.liet"))
+              , ?_assertMatch({ok, #{human := [think|_]}}, liet:apply(element(2, liet:compile_file("test/graph.liet")), ?Timeout))
+
+                %% Ensure nodes are applied 1 time maximum
+              , ?_assertMatch({ok, #{read := [{liet, 1}]}}, liet:apply(SingleVisitGraph, [read], ?Timeout))
+
+                %% Ensure dep calculation is recursive
+              , ?_assertMatch({ok, #{b := {ok, true}}}, liet:apply(RecursiveDepsGraph, ?Timeout))
+              , ?_assertMatch({ok, _}, liet:destroy(RecursiveDepsGraph, undefined, ?Timeout))
              ]
      end}.
 
@@ -127,7 +139,35 @@ setup() ->
                       ]
                      ),
 
-    #{graph => LietGraph, meck => MeckGraph, stateful => StatefulGraph}.
+    %% Currently, we cannot define ets tables (or any linked process) as a node in a liet graph.
+    %% The wrek library spawns new processes to execute each node, and they are short-lived.
+    ets:new(liet_counter, [public, named_table]),
+
+    %% This graph puts 2 dependencies on the atomic operation to update a counter. If 'incr' is
+    %% visited more than once, the 'read' result will reflect that
+    {ok, SingleVisitGraph} = liet:compile(
+                               [
+                                {incr, ets:update_counter(liet_counter, liet, 1, {liet, 0})},
+                                {a, fun() -> _ = ?l(incr), ok end},
+                                {b, fun() -> _ = ?l(incr), ok end},
+                                {read, fun() -> _ = [?l(a), ?l(b)], ets:lookup(liet_counter, liet) end}
+                               ]
+                              ),
+
+    %% Make sure b runs after root
+    {ok, RecursiveDepsGraph} = liet:compile([
+                                 {root, fun() -> timer:sleep(100), application:set_env(liet, root_finished, true) end, application:unset_env(liet, root_finished)},
+                                 {a, fun() -> _ = ?l(root), ok end},
+                                 {b, fun() -> _ = ?l(a), application:get_env(liet, root_finished) end}
+                                ]),
+
+    #{graph => LietGraph,
+      meck => MeckGraph,
+      stateful => StatefulGraph,
+      single => SingleVisitGraph,
+      recursive => RecursiveDepsGraph
+     }.
 
 teardown(#{}) ->
+    ets:delete(liet_counter),
     ok.
