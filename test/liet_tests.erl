@@ -92,6 +92,7 @@ apply_and_destroy_env({ExpectKey, ExpectVal}, Graph) ->
     {ApplyResult, DestroyResult}.
 
 setup() ->
+    {ok, _} = application:ensure_all_started(meck),
     {ok, _} = application:ensure_all_started(liet),
 
     {ok, _} = liet:compile([]),

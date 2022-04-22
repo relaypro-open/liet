@@ -6,7 +6,6 @@
   {applications,
    [kernel,
     stdlib,
-    meck,
     wrek
    ]},
   {env,[]},
