@@ -1,6 +1,6 @@
 -module(liet_transform).
 
--export([parse_transform/2, get_mfatom/1, make_ast/1]).
+-export([parse_transform/2, compile/1]).
 
 parse_transform(AST, _Options) ->
     walk_ast([], AST).
@@ -32,13 +32,19 @@ transform_statement({call, Line, {remote, _Line1, {atom, _Line2, liet},
     % liet:compile
     % Transforms list of tuples that meet the liet:compile code contract into
     % the dependency graph map required for liet:start
-    {map, Line, do_liet_compile([], Arg)};
+    compile(Arg, Line);
 transform_statement(Stmt) when is_tuple(Stmt) ->
     list_to_tuple(transform_statement(tuple_to_list(Stmt)));
 transform_statement(Stmt) when is_list(Stmt) ->
     [transform_statement(S) || S <- Stmt];
 transform_statement(Stmt) ->
     Stmt.
+
+compile(AST) ->
+    compile(AST, 1).
+
+compile(AST, Line) ->
+    {tuple, Line, [{atom, Line, ok}, {map, Line, do_liet_compile([], AST)}]}.
 
 do_liet_compile(MapFieldAssocAcc, {nil, _Line}) ->
     lists:reverse(MapFieldAssocAcc);
@@ -164,45 +170,3 @@ find_liet_refs_in_expressions(Acc, _Stmt) ->
 list_to_cons([], Line) -> {nil, Line};
 list_to_cons([H|T], Line) ->
     {cons, Line, H, list_to_cons(T, Line)}.
-
-%% @doc Returns a list of tuples of the form
-%%
-%% [{Module, Function, Atom}]
-%%
-%% for all funcation calls encountered in the AST that have an atom as the
-%% first argument.
-%%
-%% This is intended to be used by implementers of liet_provider to make walking
-%% the AST a bit more convenient.
-get_mfatom({'fun', _Line, {clauses, Clauses}}) ->
-    get_mfatom_clauses([], Clauses).
-
-get_mfatom_clauses(Acc, []) ->
-    lists:reverse(Acc);
-get_mfatom_clauses(Acc, [{clause, _Line, _Vars, _Guards, Expressions}|T]) ->
-    get_mfatom_clauses(get_mfatom_expressions(Acc, Expressions), T).
-
-get_mfatom_expressions(Acc, []) ->
-    Acc;
-get_mfatom_expressions(Acc, {call, _Line, {remote, _Line1, {atom, _Line2, Module},
-                                        {atom, _Line3, Function}}, Args}) ->
-    {AtomArgs, MoreArgs} = lists:partition(fun({atom, _Line0, _X}) -> true; (_) -> false end, Args),
-    Atoms = [ X || {atom, _, X} <- AtomArgs ],
-    Acc2 = [{Module, Function, Atoms}|Acc],
-    get_mfatom_expressions(Acc2, MoreArgs);
-get_mfatom_expressions(Acc, Stmt) when is_tuple(Stmt) ->
-    get_mfatom_expressions(Acc, tuple_to_list(Stmt));
-get_mfatom_expressions(Acc, Stmt) when is_list(Stmt) ->
-    lists:foldl(fun(S, Acc0) -> get_mfatom_expressions(Acc0, S) end, Acc, Stmt);
-get_mfatom_expressions(Acc, _Stmt) ->
-    Acc.
-
-%% @doc Returns an AST structure for the input code string
-%%
-%% This is intended to be used by implementers of liet_provider to make constructing
-%% the AST a bit more convenient.
-make_ast(IoList) ->
-    String = binary_to_list(iolist_to_binary(IoList)),
-    {ok, Tokens, _} = erl_scan:string(String),
-    {ok, Parsed} = erl_parse:parse_exprs(Tokens),
-    Parsed.

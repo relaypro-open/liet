@@ -66,6 +66,8 @@ liet_test_() ->
                 %% Apply a graph and pass the State into the destroy
               , ?_assertMatch({{ok,#{my_env_entry := my_key}},{ok,#{my_env_entry := ok}}},
                               apply_and_destroy_env({my_key, foo}, StatefulGraph))
+
+              , ?_assertMatch({ok, _}, liet:compile_file("test/graph.liet"))
              ]
      end}.
 
@@ -79,6 +81,8 @@ apply_and_destroy_env({ExpectKey, ExpectVal}, Graph) ->
 setup() ->
     {ok, _} = application:ensure_all_started(liet),
 
+    {ok, _} = liet:compile([]),
+
     %% Inside liet:compile, all calls to liet:Var() are replaced in the AST
     %% by calls to liet:get(Var, State). The AST compiler (liet_transform) also
     %% keeps track of dependencies through these calls, so that the author does
@@ -89,7 +93,7 @@ setup() ->
     %%
     %% The macro ?l is provided to help maintain syntax highlighting between the node names
     %% and the internal references. It expands to liet:X()
-    LietGraph = liet:compile(
+    {ok, LietGraph} = liet:compile(
                   [
                    % name        code
                    {var_log_dir, filename:join(?l(var_dir), "log")},
@@ -99,7 +103,7 @@ setup() ->
                   ]
                  ),
 
-    MeckGraph = liet:compile(
+    {ok, MeckGraph} = liet:compile(
                   [
                    {string, fun() ->
                                     meck:new(string, [unstick, passthrough, no_link]),
@@ -108,7 +112,7 @@ setup() ->
                   ]
                  ),
 
-    StatefulGraph = liet:compile(
+    {ok, StatefulGraph} = liet:compile(
                       [
                        {my_env_entry,
                         fun() ->

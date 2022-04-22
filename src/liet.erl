@@ -2,9 +2,21 @@
 
 -export([apply/2, apply/3,
          destroy/3, destroy/4,
+         compile/1,
+         compile_file/1,
          get/2,
          task/1, task/2, task/3,
          linear_tasks/1]).
+
+compile(_) -> {error, "If you see this message, you should add `{parse_transform, liet_transform}` to your erl_opts."}.
+
+compile_file(File) ->
+    {ok, Contents} = file:read_file(File),
+    {ok, Tokens, _} = erl_scan:string(unicode:characters_to_list(Contents)),
+    {ok, [AST]} = erl_parse:parse_exprs(Tokens),
+    TransformedAST = liet_transform:compile(AST),
+    {value, Result, _} = erl_eval:exprs([TransformedAST], []),
+    Result.
 
 linear_tasks(Proplist) ->
     #{map := LMap} = lists:foldl(

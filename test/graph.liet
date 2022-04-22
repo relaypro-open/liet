@@ -1,0 +1,8 @@
+[
+      {sunlight, ok}
+    , {grass,    liet:sunlight()}
+    , {cow,      liet:grass()}
+    , {rabbit,   liet:grass()}
+    , {dog,      liet:rabbit()}
+    , {human,    [liet:rabbit(), liet:cow()]}
+].
