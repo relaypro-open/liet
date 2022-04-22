@@ -43,7 +43,11 @@ apply(Map, Targets, Timeout) ->
     do_action(apply, Map, undefined, Targets, Timeout).
 
 destroy(Map, State, Timeout) ->
-    do_action(destroy, Map, State, all, Timeout).
+    Targets = case State of
+                  undefined -> all;
+                  State when is_map(State) -> maps:keys(State)
+              end,
+    do_action(destroy, Map, State, Targets, Timeout).
 
 destroy(Map, State, Targets, Timeout) ->
     do_action(destroy, Map, State, Targets, Timeout).
