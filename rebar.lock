@@ -1,0 +1,14 @@
+{"1.1.0",
+[{<<"erlexec">>,{pkg,<<"erlexec">>,<<"1.9.3">>},1},
+ {<<"meck">>,
+  {git,"git@github.com:eproxus/meck.git",
+       {ref,"cc47aab4b64a46a5409c1a93353d44a367b41454"}},
+  0},
+ {<<"wrek">>,
+  {git,"git@github.com:rkallos/wrek.git",
+       {ref,"3859e9efdf21227e6e8e0ea81095b229eceb6641"}},
+  0}]}.
+[
+{pkg_hash,[
+ {<<"erlexec">>, <<"3D72AC65424CED35B9658A50E5A0C9DBD5F383E28AC9096E557F0D62926DD8E4">>}]}
+].
