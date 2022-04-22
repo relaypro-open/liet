@@ -59,7 +59,7 @@ do_liet_compile(MapFieldAssocAcc, {cons, Line,
     NormalizedDestroyAST = normalize_for_provider(DestroyAST),
     ApplyDeps = find_deps(NormalizedApplyAST),
     DestroyDeps = find_deps(NormalizedDestroyAST),
-    Deps = lists:usort(ApplyDeps ++ DestroyDeps),
+    Deps = unique_deps(ApplyDeps ++ DestroyDeps, #{}),
     TaskMap = {map, Line,
                [
                 {map_field_assoc, Line, {atom, Line, deps}, list_to_cons(Deps, Line)},
@@ -170,3 +170,13 @@ find_liet_refs_in_expressions(Acc, _Stmt) ->
 list_to_cons([], Line) -> {nil, Line};
 list_to_cons([H|T], Line) ->
     {cons, Line, H, list_to_cons(T, Line)}.
+
+unique_deps([], Acc) ->
+    maps:values(Acc);
+unique_deps([H={atom, _Line, Atom}|T], Acc) ->
+    case maps:get(Atom, Acc, undefined) of
+        undefined ->
+            unique_deps(T, Acc#{Atom => H});
+        _ ->
+            unique_deps(T, Acc)
+    end.
