@@ -32,11 +32,15 @@ do_action(Action, Graph, Input, Targets, Timeout) ->
     Map2 = wrektify(Action, Map, Input),
     Map3 = case Action of destroy -> reverse_deps(Map2); _ -> Map2 end,
     Map4 = filter_by_targets(Map3, Targets),
-    {ok, _WrekPid} = wrek:start(Map4, [{event_manager, Receiver}]),
 
-    Result = liet_wrek_event_handler:await(Receiver, Timeout),
-
-    Result.
+    case map_size(Map4) of
+        0 ->
+            {ok, #{}};
+        _ ->
+            {ok, _WrekPid} = wrek:start(Map4, [{event_manager, Receiver}]),
+            Result = liet_wrek_event_handler:await(Receiver, Timeout),
+            Result
+    end.
 
 filter_by_targets(Map, all) -> Map;
 filter_by_targets(Map, Targets) ->

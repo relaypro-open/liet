@@ -51,6 +51,7 @@ liet_test_() ->
 
                 %% A cute sample
               , ?_assertMatch({ok, #{human := [think|_]}}, liet:apply(foodchain, ?Timeout))
+              , ?_assertMatch({ok, #{}}, liet:apply(foodchain, [], ?Timeout))
              ]
      end}.
 
