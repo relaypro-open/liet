@@ -16,7 +16,7 @@ parse_transform(AST, _Options) ->
       fun({ResourceName, ASTMetadata=#{deps := Deps}}) ->
         % the resource apply and destroy functions have been transformed into functions
         % that return arity-2 anonymous functions compatible with anon_vert, so we can 
-        % simple make the call to the module function rather than tracking the full AST
+        % simply make the call to the module function rather than tracking the full AST
         Apply = case maps:get(apply, ASTMetadata, false) of
                     true -> {call, Line, {atom, Line, ResourceName}, []};
                     false -> Noop

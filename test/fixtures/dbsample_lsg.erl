@@ -7,7 +7,8 @@ post_without_comments() ->
     PostId.
 
 post_without_comments(destroy) ->
-    ets:delete(dbsample_posts, post_without_comments()).  
+    ets:delete(dbsample_posts, post_without_comments()).
+
 post_with_comments() ->
     PostId = erlang:unique_integer(),
     ets:insert(dbsample_posts, {PostId, jack(), "Welcome to my blog with comments!", [first_comment()]}),
