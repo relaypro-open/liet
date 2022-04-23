@@ -2,59 +2,33 @@
 
 -export([apply/2, apply/3,
          destroy/3, destroy/4,
-         compile/1,
-         compile_file/1,
-         get/2,
-         task/1, task/2, task/3,
-         linear_tasks/1]).
+         get/3]).
 
-compile(_) -> {error, "If you see this message, you should add `{parse_transform, liet_transform}` to your erl_opts."}.
+apply(Graph, Timeout) ->
+    do_action(apply, Graph, undefined, all, Timeout).
 
-compile_file(File) ->
-    {ok, Contents} = file:read_file(File),
-    {ok, Tokens, _} = erl_scan:string(unicode:characters_to_list(Contents)),
-    {ok, [AST]} = erl_parse:parse_exprs(Tokens),
-    TransformedAST = liet_transform:compile(AST),
-    {value, Result, _} = erl_eval:exprs([TransformedAST], []),
-    Result.
+apply(Graph, Targets, Timeout) ->
+    do_action(apply, Graph, undefined, Targets, Timeout).
 
-linear_tasks(Proplist) ->
-    #{map := LMap} = lists:foldl(
-      fun(Tuple, Acc=#{map := Map, deps := Deps}) ->
-              {Name, Task} = case Tuple of
-                                 {N, F, A} -> {N, task(F, A, Deps)};
-                                 {N, F} -> {N, task(F, Deps)}
-                             end,
-              Map2 = Map#{Name => Task},
-              Deps2 = [Name|Deps],
-              Acc#{map => Map2,
-                   deps => Deps2}
-      end, #{map => #{}, deps => []}, Proplist),
-    LMap.
-
-task(F) -> task(F, []).
-task(F, D) -> task(F, #{}, D).
-task(F, A, D) -> #{apply => F, args => A, deps => D}.
-
-apply(Map, Timeout) ->
-    do_action(apply, Map, undefined, all, Timeout).
-
-apply(Map, Targets, Timeout) ->
-    do_action(apply, Map, undefined, Targets, Timeout).
-
-destroy(Map, State, Timeout) ->
+destroy(Graph, State, Timeout) ->
     Targets = case State of
                   undefined -> all;
                   State when is_map(State) -> maps:keys(State)
               end,
-    do_action(destroy, Map, State, Targets, Timeout).
+    do_action(destroy, Graph, State, Targets, Timeout).
 
-destroy(Map, State, Targets, Timeout) ->
-    do_action(destroy, Map, State, Targets, Timeout).
+destroy(Graph, State, Targets, Timeout) ->
+    do_action(destroy, Graph, State, Targets, Timeout).
 
-do_action(Action, Map, Input, Targets, Timeout) ->
+do_action(Action, Graph, Input, Targets, Timeout) ->
     {ok, Receiver} = liet_wrek_event_handler:start_link(),
 
+    Map = if is_map(Graph) ->
+                 Graph;
+             true ->
+                 {ok, GraphMap} = Graph:'#graph-'(),
+                 GraphMap
+          end,
     Map2 = wrektify(Action, Map, Input),
     Map3 = case Action of destroy -> reverse_deps(Map2); _ -> Map2 end,
     Map4 = filter_by_targets(Map3, Targets),
@@ -112,5 +86,12 @@ reverse_deps(Map) ->
       end, Map),
     Map2.
 
-get(Name, Parent) ->
-    wrek_vert:get(Parent, Name, result).
+get(Name, Arg, State) when is_map(Arg) ->
+    case maps:find(Name, Arg) of
+        {ok, Value} ->
+            Value;
+        _ ->
+            get(Name, undefined, State)
+    end;
+get(Name, _, State) ->
+    wrek_vert:get(State, Name, result).

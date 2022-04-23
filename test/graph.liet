@@ -1,8 +1,0 @@
-[
-      {sunlight, [shine]}
-    , {grass,    [grow|liet:sunlight()]}
-    , {cow,      [moo|liet:grass()]}
-    , {rabbit,   [hop|liet:grass()]}
-    , {dog,      [bark|liet:rabbit()]}
-    , {human,    [think|lists:usort(liet:rabbit() ++ liet:cow())]}
-].
