@@ -1,6 +1,6 @@
 -module(liet).
 
--export([apply/2, apply/3,
+-export([apply/2, apply/3, apply/4,
          destroy/3, destroy/4,
          get/3]).
 
@@ -12,6 +12,9 @@ apply(Graph, Timeout) ->
 
 apply(Graph, Targets, Timeout) ->
     do_action(apply, Graph, undefined, Targets, Timeout).
+
+apply(Graph, Targets, Vars, Timeout) ->
+    do_action(apply, Graph, Vars, Targets, Timeout).
 
 destroy(Graph, State, Timeout) ->
     Targets = case State of
@@ -73,18 +76,31 @@ get_visited_nodes_by_targets(Map, [H|T], Acc) ->
     Acc2 = lists:usort(Acc ++ Deps ++ NextAcc),
     get_visited_nodes_by_targets(Map, T, Acc2).
 
-wrektify(apply, Vert=#{apply := Func, args := Args}, DefaultArgs) ->
+wrektify(apply, {Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) when is_map(DefaultArgs) ->
+    %% If args is a map that contains a key with the same name as this vert,
+    %% assume we are replacing the vert with the value in the map
+    Vert2 = maps:without([apply, destroy, args], Vert),
+    case maps:is_key(Name, DefaultArgs) of
+        true ->
+            Vert2#{module => anon_vert,
+                   args => #{func => fun(VertArg, VertState) -> liet:get(Name, VertArg, VertState) end,
+                             args => select_args(Args, DefaultArgs)}};
+        false ->
+            Vert2#{module => anon_vert,
+                   args => #{func => Func, args => select_args(Args, DefaultArgs)}}
+    end;
+wrektify(apply, {_Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) ->
     Vert2 = maps:without([apply, destroy, args], Vert),
     Vert2#{module => anon_vert,
            args => #{func => Func, args => select_args(Args, DefaultArgs)}};
-wrektify(destroy, Vert=#{destroy := Func, args := Args}, DefaultArgs) ->
+wrektify(destroy, {_Name, Vert=#{destroy := Func, args := Args}}, DefaultArgs) ->
     Vert2 = maps:without([apply, destroy, args], Vert),
     Vert2#{module => anon_vert,
            args => #{func => Func, args => select_args(Args, DefaultArgs)}};
 wrektify(Action, Map, DefaultArgs) when is_map(Map) ->
-    maps:map(fun(_K, V) -> wrektify(Action, V, DefaultArgs) end, Map);
-wrektify(_Action, X, _DefaultArgs) ->
-    X.
+    maps:map(fun(K, V) -> wrektify(Action, {K, V}, DefaultArgs) end, Map);
+wrektify(_Action, {_Name, V}, _DefaultArgs) ->
+    V.
 
 select_args(undefined, DefaultArgs) when is_map(DefaultArgs) -> maps:without([?LietInternalKey], DefaultArgs);
 select_args(undefined, DefaultArgs) -> DefaultArgs;

@@ -4,6 +4,9 @@
 -export([start_link/1,
          start_link/2,
          start_link/3,
+         start/1,
+         start/2,
+         start/3,
          get_state/2,
          stop/2]).
 
@@ -33,6 +36,17 @@ start_link(Reg, Module, Opts) ->
     gen_server:start_link(Reg, ?MODULE, #{module => Module,
                                           opts => Opts}, []).
 
+start(Module) ->
+    start(Module, #{}).
+
+start(Module, Opts) ->
+    gen_server:start(?MODULE, #{module => Module,
+                                opts => Opts}, []).
+
+start(Reg, Module, Opts) ->
+    gen_server:start(Reg, ?MODULE, #{module => Module,
+                                     opts => Opts}, []).
+
 get_state(Ref, Timeout) ->
     gen_server:call(Ref, get_state, Timeout).
 
@@ -41,8 +55,9 @@ stop(Ref, Timeout) ->
 
 init(Args=#{module := Module, opts := Opts}) ->
     Targets = maps:get(targets, Opts, all),
+    Vars = maps:get(vars, Opts, undefined),
     ApplyTimeout = maps:get(apply_timeout, Opts, ?DefaultApplyTimeout),
-    case liet:apply(Module, Targets, ApplyTimeout) of
+    case liet:apply(Module, Targets, Vars, ApplyTimeout) of
         {ok, LietState} ->
             {ok, #state{args    = Args,
                         module  = Module,
