@@ -38,8 +38,8 @@ do_action(Action, Graph, Input, Targets, Timeout) ->
                  GraphMap
           end,
     Map2 = wrektify(Action, Map, Input),
-    Map3 = case Action of destroy -> reverse_deps(Map2); _ -> Map2 end,
-    Map4 = filter_by_targets(Map3, Targets),
+    Map3 = filter_by_targets(Map2, Targets),
+    Map4 = case Action of destroy -> reverse_deps(Map3); _ -> Map3 end,
 
     case map_size(Map4) of
         0 ->
