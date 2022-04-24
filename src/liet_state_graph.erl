@@ -7,11 +7,17 @@
 -define(StateVar, 'StateVar@@').
 
 parse_transform(AST, _Options) ->
-    {Resources, AST2} = walk_ast(#{}, [], AST),
+    %% calls to erlang module are usually 'local' calls like `self()` so we
+    %% must make sure we do not include them in our liet resources
+    IgnoreCalls = [ X || {X, 0} <- erlang:module_info(exports) ],
+    Opts = #{ignore_calls => IgnoreCalls,
+             ignore_funs => sets:new()},
+
+    {Resources, AST2} = walk_ast(#{}, [], AST, Opts),
 
     Line = 1000,
 
-    Noop = create_anon_vert_function([{atom, Line, ok}]),
+    Noop = create_anon_vert_function([{atom, Line, ok}], Opts),
     ResourcesAssoc = lists:map(
       fun({ResourceName, ASTMetadata=#{deps := Deps}}) ->
         % the resource apply and destroy functions have been transformed into functions
@@ -49,30 +55,49 @@ add_to_exports(Acc, AST=[{function, Line, _Name, _Arity, _Clauses}|_], NewExport
 add_to_exports(Acc, [H|T], NewExports) ->
     add_to_exports([H|Acc], T, NewExports).
 
-walk_ast(Resources, Acc, []) ->
+walk_ast(Resources, Acc, [], _Opts) ->
     {Resources, lists:reverse(Acc)};
-walk_ast(Resources, Acc, [{attribute, _, module, _Module}=H|T]) ->
-    walk_ast(Resources, [H|Acc], T);
+walk_ast(Resources, Acc, [{attribute, _, module, _Module}=H|T], Opts) ->
+    walk_ast(Resources, [H|Acc], T, Opts);
+
+%% add exports to ignore options
+walk_ast(Resources, Acc, [H={attribute, _Line, export, Exports}|T],
+         Opts=#{ignore_funs := IgnoreFuns,
+                ignore_calls := IgnoreCalls}) ->
+    ZeroArityFuns = [ X || {X, 0} <- Exports ],
+    walk_ast(Resources, [H|Acc], T,
+             Opts#{ignore_funs => sets:union(IgnoreFuns, sets:from_list(Exports)),
+                   ignore_calls => lists:usort(ZeroArityFuns ++ IgnoreCalls)});
 
 %% resource function -- 0 arity, single clause
-walk_ast(Resources, Acc, [{function, Line, Name, 0, [{clause, _Line1, Args=[], [], ApplyBody}]}|T]) ->
-    {Resources2, Acc2} = walk_apply_destroy(Resources, Acc, Line, Name, apply, Args, ApplyBody),
-    walk_ast(Resources2, Acc2, T);
+walk_ast(Resources, Acc, [AST={function, Line, Name, 0, [{clause, _Line1, Args=[], [], ApplyBody}]}|T], Opts=#{ignore_funs := IgnoreFuns}) ->
+    case sets:is_element({Name, 0}, IgnoreFuns) of
+        true ->
+            walk_ast(Resources, [AST|Acc], T, Opts);
+        false ->
+            {Resources2, Acc2} = walk_apply_destroy(Resources, Acc, Line, Name, apply, Args, ApplyBody, Opts),
+            walk_ast(Resources2, Acc2, T, Opts)
+    end;
 
 %% destroy function -- 1 arity, single clause, argument is the atom=destroy
-walk_ast(Resources, Acc, [{function, Line, Name, 1, [{clause, _Line1, Args=[{atom, _Line2, destroy}], [], DestroyBody}]}|T]) ->
-    {Resources2, Acc2} = walk_apply_destroy(Resources, Acc, Line, Name, destroy, Args, DestroyBody),
-    walk_ast(Resources2, Acc2, T);
+walk_ast(Resources, Acc, [AST={function, Line, Name, 1, [{clause, _Line1, Args=[{atom, _Line2, destroy}], [], DestroyBody}]}|T], Opts=#{ignore_funs := IgnoreFuns}) ->
+    case sets:is_element({Name, 1}, IgnoreFuns) of
+        true ->
+            walk_ast(Resources, [AST|Acc], T, Opts);
+        false ->
+            {Resources2, Acc2} = walk_apply_destroy(Resources, Acc, Line, Name, destroy, Args, DestroyBody, Opts),
+            walk_ast(Resources2, Acc2, T, Opts)
+    end;
 
-walk_ast(Resources, Acc, [{eof, _}|T]) ->
-    walk_ast(Resources, Acc, T);
+walk_ast(Resources, Acc, [{eof, _}|T], Opts) ->
+    walk_ast(Resources, Acc, T, Opts);
 
-walk_ast(Resources, Acc, [H|T]) ->
-    walk_ast(Resources, [H|Acc], T).
+walk_ast(Resources, Acc, [H|T], Opts) ->
+    walk_ast(Resources, [H|Acc], T, Opts).
 
-walk_apply_destroy(Resources, Acc, Line, Name, ApplyOrDestroy, Args, Body) ->
+walk_apply_destroy(Resources, Acc, Line, Name, ApplyOrDestroy, Args, Body, Opts) ->
 
-    NBody = create_anon_vert_function(Body),
+    NBody = create_anon_vert_function(Body, Opts),
     DestroyDeps = find_deps(NBody) -- [Name],
     Function = {function, Line, Name, length(Args), [{clause, Line, Args, [], [NBody]}]},
 
@@ -82,9 +107,9 @@ walk_apply_destroy(Resources, Acc, Line, Name, ApplyOrDestroy, Args, Body) ->
     {Resources2, [Function|Acc]}.
 
 %% turns any body into an arity-2 anonymous function
-create_anon_vert_function(Body=[H|_]) ->
+create_anon_vert_function(Body=[H|_], Opts) ->
     Line = element(2, H),
-    {Transformed, Body2} = rewrite_anon_vert_function_body(Body),
+    {Transformed, Body2} = rewrite_anon_vert_function_body(Body, Opts),
 
     % track whether or not the body was transformed with liet:get/3 so that we can
     % avoid unused variable warnings
@@ -104,23 +129,29 @@ create_anon_vert_function(Body=[H|_]) ->
     {'fun', Line,
      {clauses, Clauses}}.
 
-rewrite_anon_vert_function_body({call, Line, {atom, Line1, Resource}, []}) ->
-    %% We assume all calls to 0-arity functions are resource calls
-    {true,
-     {call, Line,
-      {remote, Line1, {atom, Line1, liet},
-       {atom, Line1, get}},
-      [{atom, Line1, Resource},
-       {var, Line1, ?ArgVar},
-       {var, Line1, ?StateVar}]
-     }};
-rewrite_anon_vert_function_body(AST) when is_tuple(AST) ->
-    {Transformed, AST2} = rewrite_anon_vert_function_body(tuple_to_list(AST)),
+rewrite_anon_vert_function_body(AST={call, Line, {atom, Line1, Resource}, []}, Opts) ->
+    IgnoreCalls = maps:get(ignore_calls, Opts, []),
+    case lists:member(Resource, IgnoreCalls) of
+        true ->
+            {false, AST};
+        false ->
+            %% We assume all other calls to 0-arity functions are resource calls
+            {true,
+             {call, Line,
+              {remote, Line1, {atom, Line1, liet},
+               {atom, Line1, get}},
+              [{atom, Line1, Resource},
+               {var, Line1, ?ArgVar},
+               {var, Line1, ?StateVar}]
+             }}
+    end;
+rewrite_anon_vert_function_body(AST, Opts) when is_tuple(AST) ->
+    {Transformed, AST2} = rewrite_anon_vert_function_body(tuple_to_list(AST), Opts),
     {Transformed, list_to_tuple(AST2)};
-rewrite_anon_vert_function_body(AST) when is_list(AST) ->
-    {Transformed, AST2} = lists:unzip([ rewrite_anon_vert_function_body(X) || X <- AST ]),
+rewrite_anon_vert_function_body(AST, Opts) when is_list(AST) ->
+    {Transformed, AST2} = lists:unzip([ rewrite_anon_vert_function_body(X, Opts) || X <- AST ]),
     {lists:any(fun(X) -> X end, Transformed), AST2};
-rewrite_anon_vert_function_body(AST) ->
+rewrite_anon_vert_function_body(AST, _Opts) ->
     {false, AST}.
 
 find_deps({'fun', _Line, {clauses, Clauses}}) ->

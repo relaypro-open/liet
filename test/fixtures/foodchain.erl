@@ -1,14 +1,31 @@
 -module(foodchain).
 -compile({parse_transform, liet_state_graph}).
 
+%% Exported functions are not tracked as liet resources
+-export([sunlight/0]).
+
+%% Macros can embed resource calls. Notice the call to t() here
+-define(Ins(X), begin true = ets:insert(t(), {X}), X end).
+
+%% =============================================================================
+%% Module API
+%% =============================================================================
+
 sunlight() -> [shine].
 
-grass() -> [grow|sunlight()].
+%% =============================================================================
+%% Liet Resources
+%% =============================================================================
 
-cow() -> [moo|grass()].
+t() -> ets:new(?MODULE, [public, named_table, duplicate_bag]).
+t(destroy) -> ets:delete(t()).
 
-rabbit() -> [hop|grass()].
+grass() -> ?Ins([grow|sunlight()]).
 
-dog() -> [bark|rabbit()].
+cow() -> ?Ins([moo|grass()]).
 
-human() -> [think|lists:usort(rabbit() ++ cow())].
+rabbit() -> ?Ins([hop|grass()]).
+
+dog() -> ?Ins([bark|rabbit()]).
+
+human() -> ?Ins([think|lists:usort(rabbit() ++ cow())]).

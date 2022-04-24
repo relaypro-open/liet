@@ -5,6 +5,7 @@
          get/3]).
 
 -define(LietInternalKey, '#liet-internal').
+-define(GraphFn, '#graph-').
 
 apply(Graph, Timeout) ->
     do_action(apply, Graph, undefined, all, Timeout).
@@ -28,7 +29,9 @@ do_action(Action, Graph, Input, Targets, Timeout) ->
     Map = if is_map(Graph) ->
                  Graph;
              true ->
-                 {ok, GraphMap} = Graph:'#graph-'(),
+                 assert_parse_transform(Graph),
+
+                 {ok, GraphMap} = Graph:?GraphFn(),
                  GraphMap
           end,
     Map2 = wrektify(Action, Map, Input),
@@ -113,3 +116,12 @@ get(Name, Arg, State) when is_map(Arg) ->
     end;
 get(Name, _, State) ->
     wrek_vert:get(State, Name, result).
+
+assert_parse_transform(Graph) ->
+    LsgExports = Graph:module_info(exports),
+    case lists:member({?GraphFn, 0}, LsgExports) of
+        false ->
+            erlang:error("Please add `-compile({parse_transform, liet_state_graph}).` to module '" ++ atom_to_list(Graph)) ++ "'";
+        _ ->
+            ok
+    end.

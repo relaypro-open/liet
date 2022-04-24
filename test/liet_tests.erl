@@ -49,9 +49,14 @@ liet_test_() ->
               , ?_assertMatch({ok, #{b := {ok, true}}}, liet:apply(recursivedeps, ?Timeout))
               , ?_assertMatch({ok, _}, liet:destroy(recursivedeps, undefined, ?Timeout))
 
-                %% A cute sample
-              , ?_assertMatch({ok, #{human := [think|_]}}, liet:apply(foodchain, ?Timeout))
-              , ?_assertMatch({ok, #{}}, liet:apply(foodchain, [], ?Timeout))
+                %% Use of gen_liet (Resource Acquisition Is Initialization)
+              , ?_assertMatch({ok, _}, gen_liet:start_link({local, foodchain}, foodchain, #{apply_timeout => ?Timeout}))
+              , ?_assertMatch(#{human := [think|_]}, gen_liet:get_state(foodchain, ?Timeout))
+              , ?_assertNotMatch(#{sunlight := _}, gen_liet:get_state(foodchain, ?Timeout))
+              , ?_assertMatch([_|_], ets:tab2list(foodchain))
+              , ?_assertMatch(ok, gen_liet:stop(foodchain, ?Timeout))
+              , ?_assertMatch(undefined, whereis(foodchain))
+              , ?_assertMatch(undefined, ets:info(foodchain))
              ]
      end}.
 
@@ -59,11 +64,7 @@ setup() ->
     {ok, _} = application:ensure_all_started(meck),
     {ok, _} = application:ensure_all_started(liet),
 
-    %% Currently, we cannot define ets tables (or any linked process) as a node in a liet graph.
-    %% The wrek library spawns new processes to execute each node, and they are short-lived.
-    ets:new(liet_counter, [public, named_table]),
     #{}.
 
 teardown(#{}) ->
-    ets:delete(liet_counter),
     ok.
