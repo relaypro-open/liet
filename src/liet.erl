@@ -71,10 +71,14 @@ filter_by_targets(Map, Targets) ->
 get_visited_nodes_by_targets(_Map, [], Acc) ->
     Acc;
 get_visited_nodes_by_targets(Map, [H|T], Acc) ->
-    #{deps := Deps} = maps:get(H, Map),
-    NextAcc = get_visited_nodes_by_targets(Map, Deps, []),
-    Acc2 = lists:usort(Acc ++ Deps ++ NextAcc),
-    get_visited_nodes_by_targets(Map, T, Acc2).
+    case maps:find(H, Map) of
+        {ok, #{deps := Deps}} ->
+            NextAcc = get_visited_nodes_by_targets(Map, Deps, []),
+            Acc2 = lists:usort(Acc ++ Deps ++ NextAcc),
+            get_visited_nodes_by_targets(Map, T, Acc2);
+        error ->
+            erlang:error({missing_resource, H})
+    end.
 
 wrektify(apply, {Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) when is_map(DefaultArgs) ->
     %% If args is a map that contains a key with the same name as this vert,
