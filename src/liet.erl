@@ -4,6 +4,8 @@
          destroy/3, destroy/4,
          get/3]).
 
+-define(LietInternalKey, '#liet-internal').
+
 apply(Graph, Timeout) ->
     do_action(apply, Graph, undefined, all, Timeout).
 
@@ -13,7 +15,7 @@ apply(Graph, Targets, Timeout) ->
 destroy(Graph, State, Timeout) ->
     Targets = case State of
                   undefined -> all;
-                  State when is_map(State) -> maps:keys(State)
+                  State when is_map(State) -> maps:keys(maps:without([?LietInternalKey], State))
               end,
     do_action(destroy, Graph, State, Targets, Timeout).
 
@@ -37,9 +39,20 @@ do_action(Action, Graph, Input, Targets, Timeout) ->
         0 ->
             {ok, #{}};
         _ ->
-            {ok, _WrekPid} = wrek:start(Map4, [{event_manager, Receiver}]),
-            Result = liet_wrek_event_handler:await(Receiver, Timeout),
-            Result
+            InputRunnerSup = if is_map(Input) ->
+                   maps:get(runner_sup, maps:get(?LietInternalKey, Input, #{}), undefined);
+               true ->
+                   undefined
+            end,
+            {ok, {_WrekPid, RunnerSup}} = wrek:start_link(Map4, [{event_manager, Receiver},
+                                                                 {global_timeout, Timeout},
+                                                                 {runner_sup, InputRunnerSup}]),
+            case liet_wrek_event_handler:await(Receiver, Timeout) of
+                {ok, Result} ->
+                    {ok, Result#{?LietInternalKey => #{runner_sup => RunnerSup}}};
+                Error ->
+                    Error
+            end
     end.
 
 filter_by_targets(Map, all) -> Map;
@@ -70,6 +83,7 @@ wrektify(Action, Map, DefaultArgs) when is_map(Map) ->
 wrektify(_Action, X, _DefaultArgs) ->
     X.
 
+select_args(undefined, DefaultArgs) when is_map(DefaultArgs) -> maps:without([?LietInternalKey], DefaultArgs);
 select_args(undefined, DefaultArgs) -> DefaultArgs;
 select_args(Args, _) -> Args.
 

@@ -1,12 +1,8 @@
 {"1.1.0",
 [{<<"erlexec">>,{pkg,<<"erlexec">>,<<"1.9.3">>},1},
- {<<"meck">>,
-  {git,"git@github.com:eproxus/meck.git",
-       {ref,"cc47aab4b64a46a5409c1a93353d44a367b41454"}},
-  0},
  {<<"wrek">>,
-  {git,"git@github.com:rkallos/wrek.git",
-       {ref,"3859e9efdf21227e6e8e0ea81095b229eceb6641"}},
+  {git,"git@github.com:relaypro-open/wrek.git",
+       {ref,"58cf128d754e7ce293984932a0088db4c17eb2ec"}},
   0}]}.
 [
 {pkg_hash,[
