@@ -21,12 +21,12 @@ render(Table, State) -> ets:tab2list(maps:get(Table, State)).
 
 fixture(true, Targets) ->
 
-    {ok, Pid} = gen_liet:start_link(dbsample_lsg, #{targets => Targets,
+    {ok, Pid} = gen_liet:start_link(dbsample_lrg, #{targets => Targets,
                                                     vars => ?Vars,
                                                     apply_timeout => ?Timeout}),
     gen_liet:get_state(Pid, ?Timeout);
 fixture(false, Targets) ->
-    dbsample_lsg:create_fixture_without_liet(Targets, ?Vars).
+    dbsample_lrg:create_fixture_without_liet(Targets, ?Vars).
 
 %% Single post, single author
 singlepost_test() ->

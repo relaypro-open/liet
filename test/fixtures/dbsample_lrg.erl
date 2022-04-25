@@ -1,5 +1,5 @@
 %% @doc Demonstrates 2 methods for creating fixtures for testing
--module(dbsample_lsg).
+-module(dbsample_lrg).
 
 -compile({parse_transform, liet_resource_graph}).
 

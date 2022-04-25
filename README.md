@@ -22,7 +22,7 @@ through a `State` structure through function calls.
 
 Eunit Fixture Sample
 --------------------
-Please see `test/dbsample_tests.erl` and `test/fixture/dbsample_lsg.erl` for a
+Please see `test/dbsample_tests.erl` and `test/fixture/dbsample_lrg.erl` for a
 demonstration of the benefits of Liet for the creation of test fixtures.
 
 Fixtures are usually written to create a specific application state rather than
