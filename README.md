@@ -32,7 +32,9 @@ Resources
 ---------
 A **Liet Resource** is a stateful entity that you, the developer, wish to keep
 track of.  To create **Liet Resource**s, you must define a new Erlang module,
-and use
+and compile with `{parse_transform, liet_resource_graph}`.
+
+Example module `my_resources`:
 
 ```
 %% my_resources.erl
@@ -74,7 +76,8 @@ To continue our ets example:
 animals(destroy) -> ets:delete(animals()).
 ```
 
-Otherwise, the function is untouched by the transform.
+The parse transform does not modify any functions other than those that meet the
+**Apply** and **Destroy** requirements above.
 
 As you may have noticed in the **Destroy** example, **Liet Resource Function**s can
 include references to other resources. When a 0-arity call is defined inside
@@ -95,7 +98,7 @@ To execute your **Liet Resource Graph**:
 {ok, Pid} = gen_liet:start_link(my_resources).
 ```
 
-This creates the **Liet Runtime State**. Liet guarantees that eaach resource
+This creates the **Liet Runtime State**. Liet guarantees that each resource
 is created exactly once. The state keeps track of only the return value
 of each **Apply**. It can be retrieved with:
 
@@ -105,6 +108,28 @@ State = gen_liet:get_state(Pid).
 
 When the process referenced by `Pid` exits, Liet will automatically call all
 **Destroy**s that are required, and in the correct order (reverse).
+
+Targeting
+---------
+A resource graph can be reduced in size before execution by specifying
+`targets`. By passing in a list of resource names, Liet will filter the 
+resource graph down to only the resources required to create the target resources.
+
+```
+%% The 'cat' resource is not created
+{ok, _} = gen_liet:start_link(my_resources, #{targets => [dog]}).
+```
+
+Vars
+----
+When executing a resource graph, you can influence the data at runtime by overriding
+resources with specific values. This is done via the `vars` parameter.
+
+```
+%% The ets table called 'animals' is not created
+MyTable = ets:new(my_table, [public, named_table]),
+{ok, _} = get_liet:start_link(my_resources, #{vars => #{animals => MyTable}}).
+```
 
 Parse Transform
 ---------------
