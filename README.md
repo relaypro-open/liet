@@ -30,8 +30,8 @@ perform some programmatic function. This makes them good candidates for Liet.
 
 Resources
 ---------
-A *Liet Resource* is a stateful entity that you, the developer, wish to keep
-track of.  To create *Liet Resource*s, you must define a new Erlang module,
+A **Liet Resource** is a stateful entity that you, the developer, wish to keep
+track of.  To create **Liet Resource**s, you must define a new Erlang module,
 and use
 
 ```
@@ -40,12 +40,12 @@ and use
 -compile({parse_transform, liet_resource_graph}).
 ```
 
-In your module, you will define two functions to manage each resource: *Apply*
-and *Destroy*.
+In your module, you will define two functions to manage each resource: **Apply**
+and **Destroy**.
 
-The *Liet Resource Apply Function* MUST be defined. It does whatever
+The **Liet Resource Apply Function** MUST be defined. It does whatever
 you choose, and is encouraged to execute code with side-effects. A function is
-an *Apply Function* if it meets these requirements:
+an **Apply Function** if it meets these requirements:
 
 1) It has 0 arity
 2) It has exactly 1 clause
@@ -58,8 +58,8 @@ Here's an example:
 animals() -> ets:new(animals, [public]).
 ```
 
-The *Liet Resource Destroy Function* SHOULD be defined when there is a
-side-effect that you want to clean up. A function is a *Destroy Function* if
+The **Liet Resource Destroy Function** SHOULD be defined when there is a
+side-effect that you want to clean up. A function is a **Destroy Function** if
 it meets these requirements:
 
 1) It has 1 arity
@@ -76,10 +76,10 @@ animals(destroy) -> ets:delete(animals()).
 
 Otherwise, the function is untouched by the transform.
 
-As you may have noticed in the *Destroy* example, *Liet Resource Function*s can
+As you may have noticed in the **Destroy** example, **Liet Resource Function**s can
 include references to other resources. When a 0-arity call is defined inside
 a resource function implementation, it is not a normal function call. Rather, it
-is an accessor to the *Liet Runtime State*, discussed below.
+is an accessor to the **Liet Runtime State**, discussed below.
 
 To conclude our ets example in module `my_resources`:
 
@@ -89,31 +89,31 @@ dog() -> ets:insert(animals(), {dog, bark}).
 cat() -> ets:insert(animals(), {cat, meow}).
 ```
 
-To execute your *Liet Resource Graph*:
+To execute your **Liet Resource Graph**:
 
 ```
 {ok, Pid} = gen_liet:start_link(my_resources).
 ```
 
-This creates the *Liet Runtime State*. Liet guarantees that eaach resource
+This creates the **Liet Runtime State**. Liet guarantees that eaach resource
 is created exactly once. The state keeps track of only the return value
-of each *Apply*. It can be retrieved with:
+of each **Apply**. It can be retrieved with:
 
 ```
 State = gen_liet:get_state(Pid).
 ```
 
 When the process referenced by `Pid` exits, Liet will automatically call all
-*Destroy*s that are required, and in the correct order (reverse).
+**Destroy**s that are required, and in the correct order (reverse).
 
 Parse Transform
 ---------------
-The implementations of the *Apply*s and *Destroy*s are traversed by
+The implementations of the **Apply**s and **Destroy**s are traversed by
 `liet_resource_graph` at compile time to:
 
 1) Determine dependencies
 2) Replace calls to resources with new calls that are accessors to the
-*Liet Runtime State*.
+**Liet Runtime State**.
 
 The final result of `liet_resource_graph` is an additional exported function on your module
 called `'#graph-'/0`. This function is used internally by Liet to kick off the creation
