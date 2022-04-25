@@ -1,4 +1,4 @@
--module(liet_state_graph).
+-module(liet_resource_graph).
 
 -export([parse_transform/2]).
 

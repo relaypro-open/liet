@@ -1,5 +1,5 @@
 -module(meckstring).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 string() ->
     meck:new(string, [unstick, passthrough, no_link]),

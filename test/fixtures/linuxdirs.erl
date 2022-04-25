@@ -1,5 +1,5 @@
 -module(linuxdirs).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 var_log_dir() -> filename:join(var_dir(), "log").
 

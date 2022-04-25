@@ -1,5 +1,5 @@
 -module(myenv).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 %% We return the Key name from this resource so that it
 %% can be referenced in the destroy.

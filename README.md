@@ -6,8 +6,8 @@ manage a complex set of tasks embedded in a dependency graph without having to
 use nested data structures. Liet was inspired by the Terraform core.
 
 As a developer, you will write a special Erlang module that represents your Liet
-State Graph (LSG). When this module is compiled with
-`{parse_transform, liet_state_graph}`, your module can be used with `gen_liet`,
+Resource Graph (LRG). When this module is compiled with
+`{parse_transform, liet_resource_graph}`, your module can be used with `gen_liet`,
 `liet:apply/N`, or`liet:destroy/N` to create and destroy stateful resources.
 
 Why use Liet instead of regular functional programming? Liet provides the
@@ -16,7 +16,7 @@ following benefits:
 1) Liet embraces side effects.
 2) A resource will never be created or destroyed more than once.
 3) All resources are destroyed automatically when the calling process exits.
-4) Your LSG code can pull information seamlesslesly, without you having to plumb
+4) Your LRG code can pull information seamlesslesly, without you having to plumb
 through a `State` structure through function calls.
 5) Resources are executed concurrently where possible.
 
@@ -37,7 +37,7 @@ and use
 ```
 %% my_resources.erl
 -module(my_resources).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 ```
 
 In your module, you will define two functions to manage each resource: *Apply*
@@ -89,7 +89,7 @@ dog() -> ets:insert(animals(), {dog, bark}).
 cat() -> ets:insert(animals(), {cat, meow}).
 ```
 
-To execute your *Liet State Graph*:
+To execute your *Liet Resource Graph*:
 
 ```
 {ok, Pid} = gen_liet:start_link(my_resources).
@@ -109,13 +109,13 @@ When the process referenced by `Pid` exits, Liet will automatically call all
 Parse Transform
 ---------------
 The implementations of the *Apply*s and *Destroy*s are traversed by
-`liet_state_graph` at compile time to:
+`liet_resource_graph` at compile time to:
 
 1) Determine dependencies
 2) Replace calls to resources with new calls that are accessors to the
 *Liet Runtime State*.
 
-The final result of `liet_state_graph` is an additional exported function on your module
+The final result of `liet_resource_graph` is an additional exported function on your module
 called `'#graph-'/0`. This function is used internally by Liet to kick off the creation
 and destruction of resources. You shouldn't call this function.
 

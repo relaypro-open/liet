@@ -1,5 +1,5 @@
 -module(singlecounter).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 %% This graph puts 2 dependencies on the atomic operation to update a counter. If 'incr' is
 %% visited more than once, the 'read' result will reflect that

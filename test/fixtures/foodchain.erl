@@ -1,5 +1,5 @@
 -module(foodchain).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 %% Exported functions are not tracked as liet resources
 -export([sunlight/0]).

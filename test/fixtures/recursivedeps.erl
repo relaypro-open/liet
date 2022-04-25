@@ -1,5 +1,5 @@
 -module(recursivedeps).
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 %% Make sure b runs after root
 

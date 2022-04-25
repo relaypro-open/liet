@@ -1,7 +1,7 @@
 %% @doc Demonstrates 2 methods for creating fixtures for testing
 -module(dbsample_lsg).
 
--compile({parse_transform, liet_state_graph}).
+-compile({parse_transform, liet_resource_graph}).
 
 -export([create_fixture_without_liet/2]).
 

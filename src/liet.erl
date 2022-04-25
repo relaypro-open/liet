@@ -141,7 +141,7 @@ assert_parse_transform(Graph) ->
     LsgExports = Graph:module_info(exports),
     case lists:member({?GraphFn, 0}, LsgExports) of
         false ->
-            erlang:error("Please add `-compile({parse_transform, liet_state_graph}).` to module '" ++ atom_to_list(Graph)) ++ "'";
+            erlang:error("Please add `-compile({parse_transform, liet_resource_graph}).` to module '" ++ atom_to_list(Graph)) ++ "'";
         _ ->
             ok
     end.
