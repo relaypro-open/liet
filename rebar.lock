@@ -1,7 +1,7 @@
 {"1.1.0",
 [{<<"erlexec">>,{pkg,<<"erlexec">>,<<"1.9.3">>},1},
  {<<"wrek">>,
-  {git,"git@github.com:relaypro-open/wrek.git",
+  {git,"https://github.com/relaypro-open/wrek.git",
        {ref,"58cf128d754e7ce293984932a0088db4c17eb2ec"}},
   0}]}.
 [
