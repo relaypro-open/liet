@@ -87,20 +87,31 @@ wrektify(apply, {Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) when i
     case maps:is_key(Name, DefaultArgs) of
         true ->
             Vert2#{module => anon_vert,
-                   args => #{func => fun(VertArg, VertState) -> liet:get(Name, VertArg, VertState) end,
+                   args => #{action => apply,
+                             name => Name,
+                             func => fun(VertArg, VertState) -> liet:get(Name, VertArg, VertState) end,
                              args => select_args(Args, DefaultArgs)}};
         false ->
             Vert2#{module => anon_vert,
-                   args => #{func => Func, args => select_args(Args, DefaultArgs)}}
+                   args => #{action => apply,
+                             name => Name,
+                             func => Func,
+                             args => select_args(Args, DefaultArgs)}}
     end;
-wrektify(apply, {_Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) ->
+wrektify(apply, {Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) ->
     Vert2 = maps:without([apply, destroy, args], Vert),
     Vert2#{module => anon_vert,
-           args => #{func => Func, args => select_args(Args, DefaultArgs)}};
-wrektify(destroy, {_Name, Vert=#{destroy := Func, args := Args}}, DefaultArgs) ->
+           args => #{action => apply,
+                     name => Name,
+                     func => Func,
+                     args => select_args(Args, DefaultArgs)}};
+wrektify(destroy, {Name, Vert=#{destroy := Func, args := Args}}, DefaultArgs) ->
     Vert2 = maps:without([apply, destroy, args], Vert),
     Vert2#{module => anon_vert,
-           args => #{func => Func, args => select_args(Args, DefaultArgs)}};
+           args => #{action => destroy,
+                     name => Name,
+                     func => Func,
+                     args => select_args(Args, DefaultArgs)}};
 wrektify(Action, Map, DefaultArgs) when is_map(Map) ->
     maps:map(fun(K, V) -> wrektify(Action, {K, V}, DefaultArgs) end, Map);
 wrektify(_Action, {_Name, V}, _DefaultArgs) ->
