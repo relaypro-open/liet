@@ -32,7 +32,7 @@ slog(Debug, apply, Name) ->
     spawn_link(fun() -> logger(Debug, apply, Name) end);
 slog(Debug, destroy, Name) ->
     write_log(Debug, io_lib:format("[ ] Destroying ~s~p~s...~n", [?InfoColor, Name, ?UnsetColor])),
-    spawn_link(fun() -> logger(Debug, apply, Name) end).
+    spawn_link(fun() -> logger(Debug, destroy, Name) end).
 
 elog(undefined, _Logger, _Action, _Name, _Usec) ->
     ok;
