@@ -9,7 +9,12 @@
 -define(UnsetColor, "\e[0m").   % Unset
 -define(CheckMark, [10003]).
 
+%% wrek internally creates and destroys runner processes so if we want
+%% to hold any resource that's linked to a process, we have to manage
+%% the runner externally, which is what we do here by passing the runner
+%% into each vert.
 run(#{action := Action,
+      runner := Runner,
       name := Name,
       func := Fun,
       args := Args}, Parent) ->
@@ -18,7 +23,9 @@ run(#{action := Action,
     Logger = slog(Debug, Action, Name),
 
     Tick = erlang:monotonic_time(microsecond),
-    Result = Fun(Args, Parent),
+
+    Result = wrek_vert_runner:run(Runner, Fun, Args, Parent, infinity),
+
     Tock = erlang:monotonic_time(microsecond),
 
     elog(Debug, Logger, Action, Name, Tock-Tick),
