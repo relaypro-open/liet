@@ -45,14 +45,19 @@ do_action(Action, Graph, Input, Targets, Timeout) ->
         0 ->
             {ok, #{}};
         _ ->
-            InputRunnerSup = if is_map(Input) ->
-                   maps:get(runner_sup, maps:get(?LietInternalKey, Input, #{}), undefined);
-               true ->
-                   undefined
-            end,
-            {ok, {_WrekPid, RunnerSup}} = wrek:start_link(Map4, [{event_manager, Receiver},
-                                                                 {global_timeout, Timeout},
-                                                                 {runner_sup, InputRunnerSup}]),
+            RunnerSup = case Input of
+                            #{?LietInternalKey := #{runner_sup := RunnerSupPid}} ->
+                                RunnerSupPid;
+                            _ ->
+                                VertNames = maps:keys(Map4),
+                                {ok, RunnerSupPid} = wrek_runner_sup:start_link(VertNames),
+                                RunnerSupPid
+                        end,
+
+            Map5 = add_runner_to_verts(Map4, RunnerSup),
+
+            {ok, _WrekPid} = wrek:start(Map5, [{event_manager, Receiver},
+                                               {global_timeout, Timeout}]),
             case liet_wrek_event_handler:await(Receiver, Timeout) of
                 {ok, Result} ->
                     {ok, Result#{?LietInternalKey => #{runner_sup => RunnerSup}}};
@@ -79,6 +84,15 @@ get_visited_nodes_by_targets(Map, [H|T], Acc) ->
         error ->
             erlang:error({missing_resource, H})
     end.
+
+add_runner_to_verts(Map, RunnerSup) ->
+    maps:map(
+      fun(Name, Vert=#{args := Args}) ->
+              case wrek_runner_sup:get_runner(Name, RunnerSup) of
+                  Runner when is_pid(Runner) ->
+                      Vert#{args => Args#{runner => Runner}}
+              end
+      end, Map).
 
 wrektify(apply, {Name, Vert=#{apply := Func, args := Args}}, DefaultArgs) when is_map(DefaultArgs) ->
     %% If args is a map that contains a key with the same name as this vert,

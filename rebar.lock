@@ -1,8 +1,8 @@
 {"1.1.0",
 [{<<"erlexec">>,{pkg,<<"erlexec">>,<<"1.9.3">>},1},
  {<<"wrek">>,
-  {git,"https://github.com/relaypro-open/wrek.git",
-       {ref,"58cf128d754e7ce293984932a0088db4c17eb2ec"}},
+  {git,"https://github.com/rkallos/wrek",
+       {ref,"3859e9efdf21227e6e8e0ea81095b229eceb6641"}},
   0}]}.
 [
 {pkg_hash,[
